@@ -1,8 +1,6 @@
-import tkinter as tk
 from tkinter import ttk
 from tkinter.messagebox import showinfo
 import tkinter as tk                    
-from tkinter import ttk
 from tkinter import filedialog
 from tkinter.filedialog import askopenfile
 from PIL import Image, ImageTk
