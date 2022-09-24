@@ -4,7 +4,8 @@ import tkinter as tk
 from tkinter import filedialog
 from tkinter.filedialog import askopenfile
 from PIL import Image, ImageTk
-from iris_detection import Iris_detection
+from iris_detection import IrisDetection
+import cv2
 
 class App(tk.Tk):
 
@@ -35,22 +36,33 @@ class App(tk.Tk):
         l1.grid(row=1,column=1)
 
     def upload_file(self):
-        f_types = [('Jpg Files', '*.jpg')]
+        #f_types = [('Jpg Files', '*.jpg')]
+        f_types = [('Png Files', '*.png')]
         filename = filedialog.askopenfilename(filetypes=f_types)
         print(filename)
         img = ImageTk.PhotoImage(file=filename)
         self._img = img
         b2 =tk.Button(self.tab1,image=img) # using Button 
         b2.grid(row=3,column=1)
-        self._iris = Iris_detection(filename)
-        img = self._iris.start_detection()
-        im = Image.fromarray(img)
-        imgtk = ImageTk.PhotoImage(image=im)
-        b2 =tk.Button(self.tab2,image= self._img) # using Button 
+        self._iris = IrisDetection(filename)
+        
+        original_image, segmetation_image, baw_detection, color_detection = self._iris.start_detection()
+        original_image = cv2.cvtColor(original_image,cv2.COLOR_BGR2RGB)
+        original = Image.fromarray(original_image)
+        img_original = ImageTk.PhotoImage(image=original)
+        
+        
+        detection = Image.fromarray(baw_detection)
+        img_detection = ImageTk.PhotoImage(image=detection)
+
+        segmetation = Image.fromarray(segmetation_image)
+        img_segmetation = ImageTk.PhotoImage(image=segmetation)
+
+        b2 =tk.Button(self.tab2,image=img_original) # using Button 
         b2.grid(row=2,column=1)
-        b3 =tk.Button(self.tab2,image= self._img) # using Button 
+        b3 =tk.Button(self.tab2,image= img_segmetation) # using Button 
         b3.grid(row=3,column=1)
-        b4 =tk.Button(self.tab2,image=imgtk) # using Button 
+        b4 =tk.Button(self.tab2,image=img_detection) # using Button 
         b4.grid(row=2,column=2)
         self.mainloop()  
 
