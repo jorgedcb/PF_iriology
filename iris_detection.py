@@ -138,14 +138,23 @@ class IrisDetection():
         diff = radius_iris - radius_pupil
         percentages = [0.1333 , 0.3222 , 0.4888 , 0.6888 , 0.8666,0.9555]
         raddi = [int(diff*x+radius_pupil) for x in percentages]
-        #print(raddi)
-        #center = (self._pupil[0], self._pupil[1])
-        center = (self._iris[0], self._iris[1])
+        center_pupil = (self._pupil[0], self._pupil[1])
+        center_iris = (self._iris[0], self._iris[1])
+        differe = tuple(map(lambda i, j: i - j, center_iris, center_pupil))
+        # print("center_pupil",center_pupil)
+        # print("center_iris",center_iris)
+        # print("different",differe)
         #self._baw_detection = self._img_segmatation.copy()
-        for radius in raddi:
-            cv2.circle(self._color_detection, center, radius, (0, 255, 0), thickness = 1)
-            cv2.circle(self._baw_detection, center, radius, (0, 255, 0), thickness = 1)
-            cv2.circle(self._original, center, radius, (0, 255, 0), thickness = 1)
+        number_circles = len(raddi)
+        for i in range(number_circles):
+
+            diff = tuple((ti/number_circles)*(i+1) for ti in differe)
+            #print("different",diff)
+            center = tuple(map(lambda i, j: int(i + j), center_pupil, diff))
+            #print("center",center)
+            cv2.circle(self._color_detection, center, raddi[i], (0, 255, 0), thickness = 1)
+            cv2.circle(self._baw_detection, center, raddi[i], (0, 255, 0), thickness = 1)
+            cv2.circle(self._original, center, raddi[i], (0, 255, 0), thickness = 1)
         
     def histogram(self):
         
