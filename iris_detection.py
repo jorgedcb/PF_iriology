@@ -3,6 +3,7 @@ import cv2
 import matplotlib.pyplot as plt
 import seaborn as sns
 from tkinter import filedialog
+import math
 
 
 #from scipy import stats as st
@@ -12,6 +13,10 @@ from tkinter import filedialog
 #from tkinter.filedialog import askopenfile
 #from PIL import Image, ImageTk
 
+class circle():
+    def __init__(self, name, center, radious):
+        self.name = name
+        self.radius = radious
 
 class IrisDetection():
     def __init__(self, image_path):
@@ -23,6 +28,8 @@ class IrisDetection():
         self._original = None
         self._baw_detection = None
         self._color_detection = None
+        self._circles = []
+        
 
 
     def load_image(self):
@@ -45,8 +52,8 @@ class IrisDetection():
         self._img_segmatation = imagen.copy()
         self._img  = cv2.GaussianBlur(imagen,(9,9), cv2.BORDER_DEFAULT) #estudiar como funciona esto
 
-        #cv2.imwrite('original.jpg', imagen)
-        #cv2.imwrite('opencv_th_tz.jpg', t)
+        #cv2.imwrite(r'images\original.jpg', imagen)
+        #cv2.imwrite(r'images\opencv_th_tz.jpg', t)
 
         #cv2.imshow("Result",imagen)
         #cv2.waitKey(0)
@@ -55,12 +62,12 @@ class IrisDetection():
 
         _, thresh = cv2.threshold(self._img, 70, 255, cv2.THRESH_BINARY) #70
         contours, _ = cv2.findContours(thresh, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
-        cv2.imwrite('iris_tresh.jpg', thresh)
+        cv2.imwrite(r'images\iris_tresh.jpg', thresh)
         img_with_contours = np.copy(self._img)
         
         #cv2.drawContours(self._original, contours, -2, (0, 255, 0))
         cv2.drawContours(img_with_contours, contours, -1, (0, 255, 0))
-        #cv2.imwrite('iris_tresh.jpg', img_with_contours)
+        #cv2.imwrite(r'images\iris_tresh.jpg', img_with_contours)
         c = cv2.HoughCircles(img_with_contours, cv2.HOUGH_GRADIENT, 2, 400, maxRadius=100) #80
         len_c = len(c)
         for l in c:
@@ -82,7 +89,7 @@ class IrisDetection():
         contours, _ = cv2.findContours(t, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         img_with_contours = np.copy(self._img)
         cv2.drawContours(img_with_contours, contours, -1, (0, 255, 0))
-        cv2.imwrite('opencv_th_tz.jpg', img_with_contours)
+        cv2.imwrite(r'images\opencv_th_tz.jpg', img_with_contours)
         
     
         c = cv2.HoughCircles(img_with_contours, cv2.HOUGH_GRADIENT, 2, self._pupil[2] * 3, maxRadius=280, minRadius=200)
@@ -114,29 +121,95 @@ class IrisDetection():
         
         _, thresh = cv2.threshold(self._img,self._p5, 255, cv2.THRESH_BINARY)
         contours, _ = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-        cv2.imwrite('anomalies.jpg', thresh)
-
+        cv2.imwrite(r'images\anomalies.jpg', thresh)
         contour_list = []
+        
+        
         for contour in contours:
+            # print("_____________________________________")
+            # print(cv2.mean(contour))
+            # print("contour")
+            # print(contour)
+           
+            #x = input()
             approx = cv2.approxPolyDP(contour,0.01*cv2.arcLength(contour,True),True) #this is to find circles, dont need it right know
             area = cv2.contourArea(contour)
+            #mean_val = cv2.mean(im,mask = mask)
             #print('area',len(approx),area)
-            if  area < 10000: #avoid find countours to big maybe y have to increase this value
+            if  area < 300: #avoid find countours to big maybe y have to increase this value
                 #print('area',len(approx),area)
                 contour_list.append(contour)
             # else:
             #     #contour_list.append(contour)
             #     pass
+        #print("contour_list",contour_list[0])
+        self._countour_list = contour_list
         self._baw_detection = self._img_segmatation.copy()
         cv2.drawContours(self._baw_detection, contour_list, -2, (255, 0, 0))
         cv2.drawContours(self._original, contour_list, -2, (255, 0, 0))
         cv2.drawContours(self._color_detection, contour_list, -2, (255, 0, 0))
+        #print("_baw_detection",self._baw_detection[220, 245])
+        #print("_color_detection",self._color_detection[220, 245])
+        cv2.circle(self._original, (220, 245), 3, (0, 0, 255), thickness = -1)
+
+    def fusifier(self):
+        contour_list = self._countour_list
+        #print(contour_list)
+        #print(self._circles)
+        # Initialize empty list
+        lst_intensities = []
+        img = self._img_segmatation.copy()
+        jorge = img.copy()
+
+        #cv2.imwrite(r'images\anomalies.jpg', img)
+        #x = input()
+        # For each list of contour points...
+        for i in range(len(contour_list)):
+            cimg = np.zeros_like(img)
+            cv2.drawContours(cimg, contour_list, i, color=255, thickness=-1)
+            cv2.drawContours(jorge, contour_list, i, color=255, thickness=-1)
+            cv2.imwrite(r'images\anomalies.jpg', jorge)
+            pts = np.where(cimg == 255)
+            intensity = 100 - ((img[pts[0], pts[1]].mean())*(100/255))
+            names = []
+            countour = contour_list[i]
+            #print(countour)
+            min_distance = 0
+            print(len(self._circles))
+            for circle in self._circles:
+                distances = [math.dist(x[0], circle[0]) for x in countour]
+                print(distances)
+                if any((x >= min_distance and x < circle[1]) for x in distances):
+                    names.append(circle[2])
+                min_distance = circle[1]
+            
+            if 0 <= intensity <= 25:
+                organ_name = "Agudo"
+            elif 25 <= intensity <= 50:
+                organ_name = "Sub-Agudo "
+            elif 50 <= intensity <= 75:
+                organ_name = "Cronico"
+            elif 75 <= intensity <= 100:
+                organ_name = "Degenerativo"
+
+            anomalie =  [names,intensity,organ_name]
+            lst_intensities.append(anomalie)
+            print("--------------------------")
+            #print("contour_list",contour_list[i])
+            print(anomalie)
+            #x = input()
+            
+            # x = input()
+        #print("--------------------------")
+        #print(lst_intensities)
+
 
     def draw_circules(self):
         radius_pupil = self._pupil[2]
         radius_iris = self._iris[2]
         diff = radius_iris - radius_pupil
         percentages = [0.1333 , 0.3222 , 0.4888 , 0.6888 , 0.8666,0.9555]
+        names  = ["Estomago" , "Intestino" , "Corazon, bronquios y páncreas" , "Esqueleto, útero y Prostata" ,"Cerebro, pulmones, higado, bazo, riñones","Músculos, sistema nervioso, linfático y circulatorio", "Piel y nervios sensoriales"]
         raddi = [int(diff*x+radius_pupil) for x in percentages]
         center_pupil = (self._pupil[0], self._pupil[1])
         center_iris = (self._iris[0], self._iris[1])
@@ -146,11 +219,13 @@ class IrisDetection():
         # print("different",differe)
         #self._baw_detection = self._img_segmatation.copy()
         number_circles = len(raddi)
+        
         for i in range(number_circles):
 
             diff = tuple((ti/number_circles)*(i+1) for ti in differe)
             #print("different",diff)
             center = tuple(map(lambda i, j: int(i + j), center_pupil, diff))
+            self._circles.append([center,raddi[i],names[i]])
             #print("center",center)
             cv2.circle(self._color_detection, center, raddi[i], (0, 255, 0), thickness = 1)
             cv2.circle(self._baw_detection, center, raddi[i], (0, 255, 0), thickness = 1)
@@ -211,7 +286,7 @@ class IrisDetection():
            
             #self.histogram()
             self.draw_circules()
-
+            self.fusifier()
             #imS = cv2.resize(self._img, (1280,720))   
             #cv2.imshow("Result",imS)
 
@@ -232,9 +307,9 @@ if __name__ == "__main__":
     # filename = filedialog.askopenfilename(filetypes=f_types)
     # id = IrisDetection(filename) 
 
-    id = IrisDetection('004R_3.png')
+    id = IrisDetection(r'images\004R_3.png')
 
-    #id = IrisDetection('013L_1.png')
+    #id = IrisDetection(r'images\013L_1.png')
     original_image, segmetation_image, baw_detection, color_detection = id.start_detection()
     cv2.imshow("Result",original_image) 
     cv2.waitKey(0)
