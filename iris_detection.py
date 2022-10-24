@@ -8,10 +8,14 @@ import math
 from models import Circle, Zone
 
 class IrisDetection():
-    def __init__(self, image_path):
+    def __init__(self, image_path, percentil:int):
+        if  100 < percentil < 0: 
+            raise ValueError("invalid argument!") 
         self._img_path = image_path
         self.pupil = None
         self.iris = None
+
+        self._percentil = percentil 
         self.original_image = None
         self.work_image = None
         self._anomalies_thresh = None
@@ -73,7 +77,7 @@ class IrisDetection():
     def _find_anomalies_thresh(self):
         data = self.work_image.ravel()
         data_f = np.delete(data, np.where(data == 0))
-        self._anomalies_thresh = np.percentile(data_f, 5)
+        self._anomalies_thresh = np.percentile(data_f, self._percentil)
 
     def _detect_anomalies(self):
         self._find_anomalies_thresh()
@@ -278,5 +282,5 @@ if __name__ == "__main__":
     
 
     print(id.results())
-    #cv2.imshow("Result",id.color_diagnostic_image) 
-    #cv2.waitKey(0)
+    cv2.imshow("Result",id.color_diagnostic_image) 
+    cv2.waitKey(0)
