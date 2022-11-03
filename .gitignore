@@ -3,3 +3,4 @@ venv
 *.png
 images
 __pycache__
+!chart.jpg

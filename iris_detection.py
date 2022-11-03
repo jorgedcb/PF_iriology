@@ -1,9 +1,7 @@
-from unicodedata import name
 import numpy as np
 import cv2
 import matplotlib.pyplot as plt
 import seaborn as sns
-from tkinter import filedialog
 import math
 from models import Circle, Zone
 
@@ -26,6 +24,7 @@ class IrisDetection():
         self._gray_scale_segmentate_image = None
         self._gray_scale_diagnostic_image = None
         self._color_diagnostic_image = None
+        self._color_image = None
 
 
     @staticmethod 
@@ -33,7 +32,7 @@ class IrisDetection():
         cv2.imwrite(r'images\{}.png'.format(filename), image)
 
     def load_image(self):
-        self.original_image = cv2.imread(self._img_path) #add parameter 1 to read in gray scale
+        self.original_image = cv2.imread(self._img_path)
         if type(self.original_image) is type(None):
             return False
         else:
@@ -47,8 +46,17 @@ class IrisDetection():
     def _blur_image(image):
         return cv2.GaussianBlur(image,(9,9), cv2.BORDER_DEFAULT)
 
-    def _detect_pupil(self, thresh):
+    @staticmethod
+    def _pupil_tresh(img):
+        data = img.ravel()
+        data_f = np.delete(data, np.where(data == 0))
+        std = np.std(data_f)
+        mean = np.mean(data_f)
+        return mean - std
 
+    def _detect_pupil(self, thresh):
+        img = self.work_image.copy()
+        thresh = self._pupil_tresh(img)
         _, t = cv2.threshold(self.work_image, thresh, 255, cv2.THRESH_BINARY) 
         contours, _ = cv2.findContours(t, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
         img_with_contours = np.copy(self.work_image)
@@ -61,14 +69,24 @@ class IrisDetection():
         radius = int(pupil[2])
         self.pupil = Circle(radius, center)
 
+    @staticmethod
+    def _iris_tresh(img):
+        data = img.ravel()
+        data_f = np.delete(data, np.where(data == 0))
+        mean = np.mean(data_f)
+        std = np.std(data_f)
+        return mean + (0.4*std)
+   
     def _detect_iris(self, thresh):
-        _, t = cv2.threshold(self.work_image, thresh, 255, cv2.THRESH_BINARY)
+        img = self.work_image.copy()
+        thresh = self._iris_tresh(img)
+        _, t = cv2.threshold(img, thresh, 255, cv2.THRESH_BINARY)
         contours, _ = cv2.findContours(t, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         img_with_contours = np.copy(self.work_image)
         cv2.drawContours(img_with_contours, contours, -1, (0, 255, 0))
         circles_founds = cv2.HoughCircles(img_with_contours, cv2.HOUGH_GRADIENT, 2, self.pupil.radius * 3, maxRadius=280, minRadius=200)
         if(circles_founds.shape != (1,1,3)):
-            raise ValueError("More than 1 circle found for the pupil")
+            raise ValueError("More than 1 circle found for the iris")
         iris = circles_founds[0][0]
         center = (int(iris[0]), int(iris[1]))
         radius = int(iris[2])
@@ -124,25 +142,24 @@ class IrisDetection():
                 distances_center_outter_circle = [math.dist(x[0], zone.center_outter_circle) for x in anomalies[i]]
                 if any((inner_distance >= zone.inner_radius and outter_distance <= zone._outter_radius) for inner_distance, outter_distance in zip(distances_center_inner_circle,distances_center_outter_circle)):
                     affected_areas.append(zone.name)
-                        
-           
+                    
             if (not affected_areas) or (len(affected_areas)>2):
                 raise ValueError("Error founding affected_areas")
-            #print([affected_areas,disease_severity,intensity])
             self._found_diseases.append([affected_areas,intensity])
 
     @staticmethod
-    def _get_disease_severity(value):
-        intensity = 0
-        if 0 <= intensity <= 25:
-            disease_severity = "Agudo"
-        elif 25 <= intensity <= 50:
-            disease_severity = "Sub-Agudo "
-        elif 50 <= intensity <= 75:
-            disease_severity = "Cronico"
-        elif 75 <= intensity <= 100:
-            disease_severity = "Degenerativo"
+    def _get_disease_severity(intensity,mean,std):
 
+        if intensity <= mean-std:
+            disease_severity = "Agudo"
+        elif mean-std <= intensity <= mean:
+            disease_severity = "Sub-Agudo "
+        elif mean <= intensity <= mean+std:
+            disease_severity = "Cronico"
+        elif mean+std <= intensity:
+            disease_severity = "Degenerativo"
+        else:
+            disease_severity = "ERROR"
         return disease_severity
 
 
@@ -151,13 +168,16 @@ class IrisDetection():
         dict_results = {}
         for disease in self._found_diseases:
             for zone in disease[0]:
-                #if dict_results.has_key(zone):
                 if zone in dict_results:
                     dict_results[zone].append(disease[1])
                 else:
                     dict_results[zone] = [disease[1]]
         
-        return [(key, self._get_disease_severity(max(dict_results[key]))) for key in dict_results]
+        
+        list_percentages= ([max(dict_results[key]) for key in dict_results])
+        std = np.std(list_percentages, ddof=1)
+        mean = np.mean(list_percentages)
+        return [(key, self._get_disease_severity(max(dict_results[key]),mean,std)) for key in dict_results]
 
     def _draw_all_circles(self, image):
         for circle in self._circles:
@@ -191,7 +211,7 @@ class IrisDetection():
     @staticmethod
     def _draw_point(image, circle):
         cv2.circle(image, circle.center , 2, (0, 0, 255), thickness = 1)
-
+    
     def run_diagnostic(self):
 
         if self.load_image():
@@ -210,6 +230,7 @@ class IrisDetection():
             self._set_gray_scale_diagnostic_image()
             self._set_gray_scale_segmentate_image()
             self._set_color_diagnostic_image()
+            self._set_color_image()
         else:
             print('Image file "' + self._img_path + '" could not be loaded.')
             
@@ -243,6 +264,18 @@ class IrisDetection():
     @property
     def color_diagnostic_image(self):
         return self._color_diagnostic_image
+
+    def _set_color_image(self):
+        img = self.original_image.copy()
+        self._draw_circle_perimeter(img, self.pupil)
+        self._draw_circle_perimeter(img,self.iris)
+        self._draw_countours(img,self._countours_anomalies)
+        self._draw_all_circles(img)
+        self._color_image = img
+    
+    @property
+    def color_image(self):
+        return self._color_image
     
     @staticmethod
     def histogram(image):
@@ -277,10 +310,25 @@ if __name__ == "__main__":
     # filename = filedialog.askopenfilename(filetypes=f_types)
     # id = IrisDetection(filename) 
 
-    id = IrisDetection(r'images\004R_3.png')
+    #id = IrisDetection(r'muestra aleatorias\035L_3.png',5)
+    id = IrisDetection(r'images\013L_1.png',5)
+    #id = IrisDetection(r'images\004R_3.png',5)
     id.run_diagnostic()
+    results = id.results()
+    print(results)
+    #cv2.imshow("result",id.color_image)
+    #cv2.imshow("result",id.color_diagnostic_image)
+    #id = IrisDetection(r'images\004R_3.png',5)
+    #list_paths = [r'images\013L_1.png',r'images\004R_3.png']
+    #list_paths = [r'imagenes finales\033L_1.png', r'imagenes finales\035L_2.png', r'imagenes finales\036L_2.png',r'imagenes finales\037L_2.png',r'imagenes finales\038L_2.png',r'imagenes finales\039L_2.png',r'imagenes finales\040L_2.png',r'imagenes finales\041L_2.png',r'imagenes finales\051L_2.png',r'imagenes finales\054L_2.png']
     
+    # path = r"C:\Users\jorge.castilla\Desktop\proyecto_final\pf\imagenes finales"
+    # dir_list = os.listdir(path)
 
-    print(id.results())
-    cv2.imshow("Result",id.color_diagnostic_image) 
+    # for i in range(0, 10, 2):
+    #     id = IrisDetection(r'imagenes finales\{}'.format(dir_list[i]),5)
+    #     id.run_diagnostic()
+    #     cv2.imshow(dir_list[i],id.color_image)
     cv2.waitKey(0)
+    cv2.destroyAllWindows()
+

@@ -68,27 +68,44 @@ class App(cstk.CTk):
         tabControl.add(tab2, text ='     Resultados      ')
         tabControl.add(tab3, text ='   Tabla Resultados  ')
         tabControl.pack(expand = 1, fill ="both")
-    	
+
         framet1 = cstk.CTkFrame(self.tab1)
         framet1.pack()
+
+        lper = cstk.CTkLabel(framet1, text='  Seleccione el umbral de detección  ',width=40,text_font=('satoshi', 12))  
+        lper.grid(row=1,column=1)
+        segemented_button_var = cstk.StringVar(value="5%")  # set initial value
+        segemented_button = cstk.CTkComboBox(master=framet1,
+                                              values=["3%", "5%", "7%", "9%"],
+                                              variable=segemented_button_var)
+        segemented_button.grid(row=2,column=1) 
+
         l1 = cstk.CTkLabel(framet1, text='  Seleccione imagen para empezar  ',width=40,text_font=('satoshi', 18))  
-        l1.grid(row=1,column=1)
+        l1.grid(row=3,column=1)
         b1 = cstk.CTkButton(framet1, text='Cargar foto', 
-        width=30,text_font=('satoshi', 14),command = lambda:self.upload_file(), hover_color="#808080", border_color="#3B3B3B",fg_color="#696969")
-        b1.grid(row=2,column=1)
+        width=30,text_font=('satoshi', 14),command = lambda:self.upload_file(perVal=segemented_button.get()), hover_color="#808080", border_color="#3B3B3B",fg_color="#696969")
+        b1.grid(row=4,column=1)
         lesp = cstk.CTkLabel(framet1, text=' ',width=40,text_font=('satoshi', 4))  
-        lesp.grid(row=3,column=1)
+        lesp.grid(row=5,column=1)   
         self._framet1 = None
         self._framet2 = None
         self._framet3 = None
         self._framet4 = None #para arreglar el problema
 
-    def upload_file(self):
+    def upload_file(self, perVal):
         #f_types = [('Jpg Files', '*.jpg')]
         f_types = [('Png Files', '*.png')]
         filename = filedialog.askopenfilename(filetypes=f_types)
         print(filename)
-        percentil = 53.3 #aqui le pones el valor que tu quieras
+        if perVal == "3%": 
+            Valper = 3
+        elif perVal == "5%": 
+            Valper = 5
+        elif perVal == "7%": 
+            Valper = 7
+        elif perVal == "9%": 
+            Valper = 9
+        percentil = Valper #aqui le pones el valor que tu quieras
         self._eye = IrisDetection(filename,percentil)
         self._eye.run_diagnostic()
         image=Image.open(filename)
@@ -107,7 +124,7 @@ class App(cstk.CTk):
         
         self._framet1.pack()
         b =tk.Button(self._framet1,image=img) # using CTkButton 
-        b.grid(row=4,column=1)
+        b.grid(row=6,column=1)
         original_image = self._eye.color_diagnostic_image
         segmetation_image = self._eye.gray_scale_segmentate_image
         baw_detection = self._eye.gray_scale_diagnostic_image
