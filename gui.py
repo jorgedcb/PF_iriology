@@ -11,22 +11,6 @@ import customtkinter as cstk
 cstk.set_appearance_mode("Dark")  # Modes: "System" (standard), "Dark", "Light"
 cstk.set_default_color_theme("dark-blue")  # Themes: "blue" (standard), "green", "dark-blue"
 
-class Table:
-     
-    def __init__(self,root,lst):
-        total_rows = len(lst)
-        total_columns = len(lst[0])
-        
-        for i in range(total_rows):
-            for j in range(total_columns):
-                 
-                self.e = Entry(root, width=45, fg='black', bg = '#C5C5C5',
-                               font=('satoshi',14,'bold'))
-                 
-                self.e.grid(row=i, column=j)
-                self.e.insert(END, lst[i][j])
-
-
 class App(cstk.CTk):
 
     def __init__(self):
@@ -49,24 +33,21 @@ class App(cstk.CTk):
            }  
         style.theme_create("mi_estilo", parent="alt", settings=settings)
         style.theme_use("mi_estilo")
+        style.configure("mi_estilo.Treeview", highlightthickness=0, bd=0, font=('satoshi', 16), rowheight=40, background="#c9c9c9" ) # Modify the font of the body
+        style.configure("mi_estilo.Treeview.Heading", font=('satoshi', 17,'bold'), rowheight=45, background="#bdbdbd") # Modify the font of the headings
 
         self._eye = None
         self._img = None
         self.title("Herramienta de apoyo iridológica")
-        screen_width = self.winfo_screenwidth()
-        screen_height = self.winfo_screenheight()
-        self.geometry("%dx%d" % (screen_width/1.7, screen_height))
+        self.state('zoomed')
 
         tabControl = ttk.Notebook(self, style="TNotebook")
         tab1 = ttk.Frame(tabControl, style="TFrame")
         self.tab1 = tab1
         tab2 = ttk.Frame(tabControl, style="TFrame")
         self.tab2 = tab2
-        tab3 = ttk.Frame(tabControl, style="TFrame")
-        self.tab3 = tab3
         tabControl.add(tab1, text ='   Carga y Ajustes   ')
         tabControl.add(tab2, text ='     Resultados      ')
-        tabControl.add(tab3, text ='   Tabla Resultados  ')
         tabControl.pack(expand = 1, fill ="both")
 
         framet1 = cstk.CTkFrame(self.tab1)
@@ -131,13 +112,13 @@ class App(cstk.CTk):
         original_image = cv2.cvtColor(original_image,cv2.COLOR_BGR2RGB)
         chart_image = cv2.imread("Chart.jpg")
 
-        iw = int(rel*w_o/2.2)
-        ih = int(rel*h_o/2.2)
+        iw = int(rel*w_o/2.3)
+        ih = int(rel*h_o/2.3)
 
         chart = Image.fromarray(chart_image).resize((iw, ih))
         img_chart = ImageTk.PhotoImage(image=chart)
 
-        original = Image.fromarray(original_image).resize((iw, ih))
+        original = image.resize((iw, ih))
         img_original = ImageTk.PhotoImage(image=original)
         
         detection = Image.fromarray(baw_detection).resize((iw, ih))
@@ -149,31 +130,31 @@ class App(cstk.CTk):
             self._framet2.destroy()
         self._framet2 = cstk.CTkFrame(self.tab2)
         self._framet2.pack()
-        b1 =tk.Button(self._framet2,image=img_chart) # using Button 
-        b1.grid(row=1,column=1)
         b2 =tk.Button(self._framet2,image=img_original) # using Button 
-        b2.grid(row=1,column=2)
+        b2.grid(row=1,column=1)
         b3 =tk.Button(self._framet2,image= img_segmetation) # using Button 
-        b3.grid(row=2,column=1)
+        b3.grid(row=1,column=2)
         b4 =tk.Button(self._framet2,image=img_detection) # using Button 
-        b4.grid(row=2,column=2)
-
-        if self._framet3:
-            self._framet3.destroy()
-        self._framet3 = cstk.CTkFrame(self.tab3)
-        self._framet3.pack()
-        l2 = cstk.CTkLabel(self._framet3, text='   Análisis Preeliminar   ',width=30,text_font=('satoshi', 18))  
-        l2.grid(row=1,column=1)
-        lesp2 = cstk.CTkLabel(self._framet3, text=' ',width=40,text_font=('satoshi', 4))  
-        lesp2.grid(row=2,column=1)
-        
-        if self._framet4:
-            self._framet4.destroy()
-        self._framet4 = cstk.CTkFrame(self.tab3)
-        self._framet4 .pack()
-        b5 = Table(self._framet4 , self._eye.results())
+        b4.grid(row=1,column=3)
+        b1 =tk.Button(self._framet2,image=img_chart) # using Button 
+        b1.grid(row=2,column=1)
+#------------------------------------------------------------------------------    
+        TabW1 = int(self.winfo_screenwidth()/2.4)
+        TabW2 = int(self.winfo_screenwidth()/6.4)
+        columns = ('ZA', 'NA')
+        tree = ttk.Treeview(self._framet2, columns=columns, show='headings', style="mi_estilo.Treeview", height=7)
+        tree.grid(row=2,column=2,columnspan=2)
+        tree.column("# 1",anchor=CENTER, stretch=NO, width=TabW1)
+        tree.heading('ZA', text='Sección Afectada')
+        tree.column("# 2",anchor=CENTER, stretch=NO, width=TabW2)
+        tree.heading('NA', text='Nivel')
+        tuples = self._eye.results()
+        index = iid = 0
+        for row in tuples:
+            tree.insert("", index, iid, values=row)
+            index = iid = index + 1
+#------------------------------------------------------------------------------
         self.mainloop()  
-        
 
     def button_clicked(self):
         showinfo(title='Information', message='Hello, Tkinter!')

@@ -105,7 +105,7 @@ class IrisDetection():
         
         for contour in contours:
             area = cv2.contourArea(contour)
-            if  area < 300: 
+            if  area < 10000: 
                 contour_list.append(contour)
         self._countours_anomalies = contour_list
 
@@ -123,7 +123,7 @@ class IrisDetection():
         
 
     def _find_zones(self):
-        zones_names  = ["Estomago" , "Intestino" , "Corazon, bronquios y páncreas" , "Esqueleto, útero y Prostata" ,"Cerebro, pulmones, higado, bazo, riñones","Músculos, sistema nervioso, linfático y circulatorio", "Piel y nervios sensoriales"]
+        zones_names  = ["Estomago" , "Intestino" , "Corazón, bronquios y páncreas" , "Esqueleto, útero y Próstata" ,"Cerebro, pulmones, higado, bazo, riñones","Músculos, sistema nervioso, linfático y circulatorio", "Piel y nervios sensoriales"]
         circles_zones = [self.pupil] + self._circles + [self.iris]
         for i in range(len(zones_names)):
             self._zones.append(Zone(circles_zones[i],circles_zones[i+1],zones_names[i]))
@@ -143,7 +143,7 @@ class IrisDetection():
                 if any((inner_distance >= zone.inner_radius and outter_distance <= zone._outter_radius) for inner_distance, outter_distance in zip(distances_center_inner_circle,distances_center_outter_circle)):
                     affected_areas.append(zone.name)
                     
-            if (not affected_areas) or (len(affected_areas)>2):
+            if (not affected_areas):
                 raise ValueError("Error founding affected_areas")
             self._found_diseases.append([affected_areas,intensity])
 
@@ -311,12 +311,12 @@ if __name__ == "__main__":
     # id = IrisDetection(filename) 
 
     #id = IrisDetection(r'muestra aleatorias\035L_3.png',5)
-    id = IrisDetection(r'images\013L_1.png',5)
+    id = IrisDetection(r'Experimentos\019L_3.png',5)
     #id = IrisDetection(r'images\004R_3.png',5)
     id.run_diagnostic()
     results = id.results()
     print(results)
-    #cv2.imshow("result",id.color_image)
+    cv2.imshow("result",id.color_image)
     #cv2.imshow("result",id.color_diagnostic_image)
     #id = IrisDetection(r'images\004R_3.png',5)
     #list_paths = [r'images\013L_1.png',r'images\004R_3.png']
@@ -331,4 +331,3 @@ if __name__ == "__main__":
     #     cv2.imshow(dir_list[i],id.color_image)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
-
