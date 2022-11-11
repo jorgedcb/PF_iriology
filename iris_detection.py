@@ -53,12 +53,20 @@ class IrisDetection():
         std = np.std(data_f)
         mean = np.mean(data_f)
         return mean - std
+    
+    @staticmethod
+    def _pupil_tresh_alternative(img):
+        data = img.ravel()
+        data_f = np.delete(data, np.where(data == 0))
+        return np.percentile(data_f, 12)
 
-    def _detect_pupil(self, thresh):
+    def _detect_pupil(self):
         img = self.work_image.copy()
-        thresh = self._pupil_tresh(img)
+        #thresh = self._pupil_tresh(img)
+        thresh = self._pupil_tresh_alternative(img)
         _, t = cv2.threshold(self.work_image, thresh, 255, cv2.THRESH_BINARY) 
         contours, _ = cv2.findContours(t, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+        #contours, _ = cv2.findContours(t, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
         img_with_contours = np.copy(self.work_image)
         cv2.drawContours(img_with_contours, contours, -1, (0, 255, 0))
         circles_founds = cv2.HoughCircles(img_with_contours, cv2.HOUGH_GRADIENT, 2, 400, maxRadius=100) #80
@@ -76,12 +84,20 @@ class IrisDetection():
         mean = np.mean(data_f)
         std = np.std(data_f)
         return mean + (0.4*std)
+
+    @staticmethod
+    def _iris_tresh_alternative(img):
+        data = img.ravel()
+        data_f = np.delete(data, np.where(data == 0))
+        return np.percentile(data_f, 70)
    
-    def _detect_iris(self, thresh):
+    def _detect_iris(self):
         img = self.work_image.copy()
-        thresh = self._iris_tresh(img)
+        #thresh = self._iris_tresh(img)
+        thresh = self._iris_tresh_alternative(img)
         _, t = cv2.threshold(img, thresh, 255, cv2.THRESH_BINARY)
         contours, _ = cv2.findContours(t, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        #contours, _ = cv2.findContours(t, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
         img_with_contours = np.copy(self.work_image)
         cv2.drawContours(img_with_contours, contours, -1, (0, 255, 0))
         circles_founds = cv2.HoughCircles(img_with_contours, cv2.HOUGH_GRADIENT, 2, self.pupil.radius * 3, maxRadius=280, minRadius=200)
@@ -101,11 +117,12 @@ class IrisDetection():
         self._find_anomalies_thresh()
         _, t = cv2.threshold(self.work_image, self._anomalies_thresh, 255, cv2.THRESH_BINARY)
         contours, _ = cv2.findContours(t, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        #contours, _ = cv2.findContours(t, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
         contour_list = []
         
         for contour in contours:
             area = cv2.contourArea(contour)
-            if  area < 10000: 
+            if  area < 5000: 
                 contour_list.append(contour)
         self._countours_anomalies = contour_list
 
@@ -123,7 +140,7 @@ class IrisDetection():
         
 
     def _find_zones(self):
-        zones_names  = ["Estomago" , "Intestino" , "Corazón, bronquios y páncreas" , "Esqueleto, útero y Próstata" ,"Cerebro, pulmones, higado, bazo, riñones","Músculos, sistema nervioso, linfático y circulatorio", "Piel y nervios sensoriales"]
+        zones_names  = ["Estomago" , "Intestino" , "Páncreas, Riñones y Corazón" , "Órganos respiratorios" ,"Cerebro y órganos reproductivos","Hígado, Bazo, Tiroides, Linfáticos y Glándulas Pequeñas", "Piel, Músculos, Nervios motores y sensoriales"]
         circles_zones = [self.pupil] + self._circles + [self.iris]
         for i in range(len(zones_names)):
             self._zones.append(Zone(circles_zones[i],circles_zones[i+1],zones_names[i]))
@@ -217,9 +234,9 @@ class IrisDetection():
         if self.load_image():
             self.work_image = self._convert_to_gray_scale(self.original_image)
             self.work_image = self._blur_image(self.work_image)
-            self._detect_pupil(70)
+            self._detect_pupil()
             self._segmentate_circle_inside(self.work_image, self.pupil)
-            self._detect_iris(125)
+            self._detect_iris()
             self.work_image = self._segmentate_circle_outside(self.work_image,self.iris)
             self._detect_anomalies()
             self._draw_countours(self.work_image, self._countours_anomalies)
