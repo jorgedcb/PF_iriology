@@ -64,10 +64,12 @@ class IrisDetection():
         img = self.work_image.copy()
         thresh = self._pupil_tresh_alternative(img)
         _, t = cv2.threshold(self.work_image, thresh, 255, cv2.THRESH_BINARY) 
+        self.write_image("4.1 binarización para encontrar contornos de la pupila",t)
         contours, _ = cv2.findContours(t, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
         img_with_contours = np.copy(self.work_image)
         cv2.drawContours(img_with_contours, contours, -1, (0, 255, 0))
-        circles_founds = cv2.HoughCircles(img_with_contours, cv2.HOUGH_GRADIENT, 2, 400, maxRadius=100) #80
+        self.write_image("4.2 a la imagen del paso 3 se le dibujan los contornos para detectar el circulo de la pupila",img_with_contours)
+        circles_founds = cv2.HoughCircles(img_with_contours, cv2.HOUGH_GRADIENT, 2, 400, maxRadius=100)
         if(circles_founds.shape != (1,1,3)):
             raise ValueError("More than 1 circle found for the pupil")
         pupil = circles_founds[0][0]
@@ -93,9 +95,11 @@ class IrisDetection():
         img = self.work_image.copy()
         thresh = self._iris_tresh_alternative(img)
         _, t = cv2.threshold(img, thresh, 255, cv2.THRESH_BINARY)
+        self.write_image("5.1 binarización para encontrar contornos del iris",t)
         contours, _ = cv2.findContours(t, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         img_with_contours = np.copy(self.work_image)
         cv2.drawContours(img_with_contours, contours, -1, (0, 255, 0))
+        self.write_image("5.2 a la imagen del paso 3 se le dibujan los contornos para detectar el circulo del iris",img_with_contours)
         circles_founds = cv2.HoughCircles(img_with_contours, cv2.HOUGH_GRADIENT, 2, self.pupil.radius * 3, maxRadius=280, minRadius=200)
         if(circles_founds.shape != (1,1,3)):
             raise ValueError("More than 1 circle found for the iris")
@@ -112,6 +116,7 @@ class IrisDetection():
     def _detect_anomalies(self):
         self._find_anomalies_thresh()
         _, t = cv2.threshold(self.work_image, self._anomalies_thresh, 255, cv2.THRESH_BINARY)
+        self.write_image("6.1 binarización para hallar anomalias" ,t)
         contours, _ = cv2.findContours(t, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         contour_list = []
         
@@ -227,16 +232,23 @@ class IrisDetection():
     def run_diagnostic(self):
 
         if self.load_image():
+            self.write_image("1. original",self.original_image)
             self.work_image = self._convert_to_gray_scale(self.original_image)
+            self.write_image("2. blanco y negro",self.work_image)
             self.work_image = self._blur_image(self.work_image)
+            self.write_image("3. difuminada",self.work_image)
             self._detect_pupil()
             self._segmentate_circle_inside(self.work_image, self.pupil)
+            self.write_image("4.3 imagen con pupila detectada" ,self.work_image)
             self._detect_iris()
             self.work_image = self._segmentate_circle_outside(self.work_image,self.iris)
+            self.write_image("5.3 imagen con iris detectado" ,self.work_image)
             self._detect_anomalies()
             self._draw_countours(self.work_image, self._countours_anomalies)
+            self.write_image("6.2 a la imagen 5.3 le dubijo las anomalias encontradas" ,self.work_image)
             self._find_circles()
             self._draw_all_circles(self.work_image)
+            self.write_image("7. dibujo los circulos" ,self.work_image)
             self._find_zones()
             self._fusifier()
             self._set_gray_scale_diagnostic_image()
