@@ -62,11 +62,9 @@ class IrisDetection():
 
     def _detect_pupil(self):
         img = self.work_image.copy()
-        #thresh = self._pupil_tresh(img)
         thresh = self._pupil_tresh_alternative(img)
         _, t = cv2.threshold(self.work_image, thresh, 255, cv2.THRESH_BINARY) 
         contours, _ = cv2.findContours(t, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
-        #contours, _ = cv2.findContours(t, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
         img_with_contours = np.copy(self.work_image)
         cv2.drawContours(img_with_contours, contours, -1, (0, 255, 0))
         circles_founds = cv2.HoughCircles(img_with_contours, cv2.HOUGH_GRADIENT, 2, 400, maxRadius=100) #80
@@ -93,11 +91,9 @@ class IrisDetection():
    
     def _detect_iris(self):
         img = self.work_image.copy()
-        #thresh = self._iris_tresh(img)
         thresh = self._iris_tresh_alternative(img)
         _, t = cv2.threshold(img, thresh, 255, cv2.THRESH_BINARY)
         contours, _ = cv2.findContours(t, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-        #contours, _ = cv2.findContours(t, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
         img_with_contours = np.copy(self.work_image)
         cv2.drawContours(img_with_contours, contours, -1, (0, 255, 0))
         circles_founds = cv2.HoughCircles(img_with_contours, cv2.HOUGH_GRADIENT, 2, self.pupil.radius * 3, maxRadius=280, minRadius=200)
@@ -117,7 +113,6 @@ class IrisDetection():
         self._find_anomalies_thresh()
         _, t = cv2.threshold(self.work_image, self._anomalies_thresh, 255, cv2.THRESH_BINARY)
         contours, _ = cv2.findContours(t, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-        #contours, _ = cv2.findContours(t, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
         contour_list = []
         
         for contour in contours:
@@ -321,30 +316,10 @@ class IrisDetection():
 
         
 if __name__ == "__main__":           
-    #f_types = [('Jpg Files', '*.jpg')]
-    #f_types = [('Jpg Files', '*.jpg','Png Files', '*.png')]
-    # f_types = [('Png Files', '*.png')]
-    # filename = filedialog.askopenfilename(filetypes=f_types)
-    # id = IrisDetection(filename) 
-
-    #id = IrisDetection(r'muestra aleatorias\035L_3.png',5)
     id = IrisDetection(r'Experimentos\019L_3.png',5)
-    #id = IrisDetection(r'images\004R_3.png',5)
     id.run_diagnostic()
     results = id.results()
     print(results)
     cv2.imshow("result",id.color_image)
-    #cv2.imshow("result",id.color_diagnostic_image)
-    #id = IrisDetection(r'images\004R_3.png',5)
-    #list_paths = [r'images\013L_1.png',r'images\004R_3.png']
-    #list_paths = [r'imagenes finales\033L_1.png', r'imagenes finales\035L_2.png', r'imagenes finales\036L_2.png',r'imagenes finales\037L_2.png',r'imagenes finales\038L_2.png',r'imagenes finales\039L_2.png',r'imagenes finales\040L_2.png',r'imagenes finales\041L_2.png',r'imagenes finales\051L_2.png',r'imagenes finales\054L_2.png']
-    
-    # path = r"C:\Users\jorge.castilla\Desktop\proyecto_final\pf\imagenes finales"
-    # dir_list = os.listdir(path)
-
-    # for i in range(0, 10, 2):
-    #     id = IrisDetection(r'imagenes finales\{}'.format(dir_list[i]),5)
-    #     id.run_diagnostic()
-    #     cv2.imshow(dir_list[i],id.color_image)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
